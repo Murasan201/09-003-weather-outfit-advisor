@@ -1,0 +1,36 @@
+# 環境変数ファイル（APIキーなどの機密情報）
+.env
+
+# ログファイル
+*.log
+weather_outfit.log
+weather_outfit_console.log
+
+# Pythonキャッシュファイル
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 仮想環境
+venv/
+env/
+ENV/
+.venv
+
+# IDEの設定ファイル
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OSが生成するファイル
+.DS_Store
+Thumbs.db
+
+# テスト関連
+.pytest_cache/
+.coverage
+htmlcov/

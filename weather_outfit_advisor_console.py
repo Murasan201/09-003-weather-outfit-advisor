@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Weather Forecast + Clothing Advice Display App
-天気予報＋服装提案掲示板アプリ
+Weather Forecast + Clothing Advice Display App (Console Version)
+天気予報＋服装提案掲示板アプリ（コンソール出力版）
 
-This application fetches weather data from OpenWeatherMap API,
-generates clothing advice using OpenAI API, and displays the
-information on an LCD1602 display with horizontal scrolling.
+This is a test version that outputs to console instead of LCD1602.
+LCDが使えない環境でもテストできるバージョンです。
 """
 
 # === 必要なライブラリのインポート ===
@@ -20,11 +19,9 @@ from typing import Optional, Dict, Any
 try:
     import openai
     from dotenv import load_dotenv
-    from RPLCD.i2c import CharLCD
-    import smbus2
 except ImportError as e:
     print(f"Required library not installed: {e}")
-    print("Please run: pip install -r requirements.txt")
+    print("Please run: pip install openai python-dotenv requests")
     sys.exit(1)
 
 # === 環境変数の読み込み ===
@@ -35,16 +32,16 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('weather_outfit.log'),
+        logging.FileHandler('weather_outfit_console.log'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
-# === メインクラス：天気予報＋服装提案アドバイザー ===
-class WeatherOutfitAdvisor:
+# === メインクラス：天気予報＋服装提案アドバイザー（コンソール版） ===
+class WeatherOutfitAdvisorConsole:
     def __init__(self):
-        """クラスの初期化: APIキーの取得、OpenAI・LCDの設定を行う"""
+        """クラスの初期化: APIキーの取得、OpenAIの設定を行う"""
         # 環境変数からAPIキーと都市名を取得
         self.weather_api_key = os.getenv('WEATHER_API_KEY')
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
@@ -59,14 +56,7 @@ class WeatherOutfitAdvisor:
         # OpenAI クライアントの初期化
         self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
 
-        # LCD1602ディスプレイの初期化
-        try:
-            self.lcd = CharLCD('PCF8574', 0x27)
-            self.lcd.clear()
-            logger.info("LCD initialized successfully")
-        except Exception as e:
-            logger.warning(f"LCD initialization failed: {e}")
-            self.lcd = None
+        logger.info("Console version initialized (no LCD required)")
 
     def get_weather_data(self) -> Optional[Dict[str, Any]]:
         """OpenWeatherMap APIから天気データを取得"""
@@ -129,7 +119,7 @@ class WeatherOutfitAdvisor:
             return "服装アドバイスを生成できませんでした。"
 
     def format_display_text(self, weather_data: Dict[str, Any], outfit_advice: str) -> str:
-        """LCD表示用のテキストを整形"""
+        """表示用のテキストを整形"""
         if not weather_data:
             return "天気情報取得失敗"
 
@@ -141,39 +131,42 @@ class WeatherOutfitAdvisor:
         display_text = f"{city}: {temperature}°C {weather_desc} | {outfit_advice}"
         return display_text
 
-    def display_scrolling_text(self, text: str, scroll_delay: float = 0.3):
-        """LCD1602に横スクロールでテキストを表示"""
-        if not self.lcd:
-            logger.info(f"LCD not available. Text would display: {text}")
-            return
+    def display_console_text(self, text: str, scroll_delay: float = 0.3, duration: int = 10):
+        """コンソールに横スクロールでテキストを表示（LCD1602の動作をシミュレート）"""
+        console_width = 16  # LCD1602の表示幅をシミュレート
 
-        lcd_width = 16
+        print("\n" + "=" * 50)
+        print("LCD1602 シミュレーション (16文字幅)")
+        print("=" * 50)
 
         # テキストが短い場合は中央揃えで表示
-        if len(text) <= lcd_width:
-            self.lcd.clear()
-            self.lcd.write_string(text.center(lcd_width))
+        if len(text) <= console_width:
+            centered_text = text.center(console_width)
+            print(f"[{centered_text}]")
+            time.sleep(duration)
             return
 
         # 長いテキストの場合、スクロール表示
         scroll_text = f"    {text}    "
 
         try:
-            # 文字列を1文字ずつずらして表示
-            for i in range(len(scroll_text) - lcd_width + 1):
-                self.lcd.clear()
-                display_segment = scroll_text[i:i + lcd_width]
-                self.lcd.write_string(display_segment)
-                time.sleep(scroll_delay)
+            start_time = time.time()
+            # スクロールアニメーションを実行
+            while time.time() - start_time < duration:
+                for i in range(len(scroll_text) - console_width + 1):
+                    display_segment = scroll_text[i:i + console_width]
+                    # カーソルを行頭に戻して上書き表示
+                    print(f"\r[{display_segment}]", end='', flush=True)
+                    time.sleep(scroll_delay)
+                print()  # 1サイクル終了後に改行
 
         except KeyboardInterrupt:
             logger.info("Scrolling interrupted by user")
-        except Exception as e:
-            logger.error(f"LCD display error: {e}")
+            print()
 
-    def run(self, display_duration: int = 60):
+    def run(self, display_duration: int = 10):
         """メイン実行関数: プログラム全体の流れを制御"""
-        logger.info("Starting Weather Outfit Advisor")
+        logger.info("Starting Weather Outfit Advisor (Console Version)")
 
         # ステップ1: 天気データの取得
         logger.info("Fetching weather data...")
@@ -181,9 +174,7 @@ class WeatherOutfitAdvisor:
 
         if not weather_data:
             error_msg = "天気データ取得失敗"
-            if self.lcd:
-                self.lcd.clear()
-                self.lcd.write_string(error_msg)
+            print(f"\n[ERROR] {error_msg}")
             logger.error("Failed to get weather data")
             return
 
@@ -195,28 +186,27 @@ class WeatherOutfitAdvisor:
         display_text = self.format_display_text(weather_data, outfit_advice)
         logger.info(f"Display text: {display_text}")
 
-        # ステップ4: LCD表示（指定時間分繰り返し）
-        start_time = time.time()
-        while time.time() - start_time < display_duration:
-            self.display_scrolling_text(display_text)
-            time.sleep(1)
+        # ステップ4: コンソール表示
+        self.display_console_text(display_text, scroll_delay=0.3, duration=display_duration)
 
         # ステップ5: 終了処理
-        if self.lcd:
-            self.lcd.clear()
-
-        logger.info("Weather Outfit Advisor completed")
+        print("\n" + "=" * 50)
+        print("表示完了")
+        print("=" * 50)
+        logger.info("Weather Outfit Advisor (Console Version) completed")
 
 # === プログラムのエントリーポイント ===
 def main():
     """メイン関数: プログラム全体の起動と例外処理を管理"""
     try:
-        advisor = WeatherOutfitAdvisor()
-        advisor.run()
+        advisor = WeatherOutfitAdvisorConsole()
+        advisor.run(display_duration=10)  # テスト用に10秒に設定
     except KeyboardInterrupt:
         logger.info("Application interrupted by user")
+        print("\n\nプログラムを中断しました。")
     except Exception as e:
         logger.error(f"Application error: {e}")
+        print(f"\n[ERROR] {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

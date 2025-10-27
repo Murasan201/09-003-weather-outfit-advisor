@@ -12,9 +12,10 @@
 
 ## 技術スタック
 - **言語**: Python 3.9以上
-- **ハードウェア**: Raspberry Pi 5 + LCD1602（I²C接続）
+- **ハードウェア**: Raspberry Pi 5 + SSD1306 OLED（I²C接続、128×64）
 - **API**: OpenWeatherMap API, OpenAI API
-- **主要ライブラリ**: requests, openai, RPLCD, smbus2, python-dotenv
+- **主要ライブラリ**: requests, openai, luma.oled, Pillow, python-dotenv
+- **参照実装**: https://github.com/Murasan201/06-004-ssd1306-oled-jp-display
 
 ## コーディング規約
 - PEP8準拠のコードスタイル
@@ -31,18 +32,21 @@
 以下のテストを実装・実行すること：
 - API取得テスト（無効APIキー、ネットワーク切断対応）
 - 判定ロジックテスト（各気温・天気パターン）
-- LCD表示テスト（横スクロール動作）
+- OLED表示テスト（横スクロール動作、日本語表示）
 - 定期実行テスト（指定時刻での実行）
 
 ## 受け入れ基準
-1. 当日の天気と服装アドバイスがLCD1602で正しくスクロール表示される
+1. 当日の天気と服装アドバイスがSSD1306 OLEDで正しく日本語スクロール表示される
 2. APIエラー発生時にログが出力され、次実行で回復する
 3. 環境変数変更が即時反映される
 
 ## 環境設定
-- `.env`ファイルでAPI認証情報を管理
+- `.env`ファイルでAPI認証情報とディスプレイ設定を管理
 - 必要なAPIキー: `WEATHER_API_KEY`, `OPENAI_API_KEY`
 - デフォルト都市: Tokyo（`CITY_NAME`で変更可能）
+- OLED設定: `OLED_WIDTH`, `OLED_HEIGHT`, `OLED_I2C_ADDRESS`
+- フォント設定: `FONT_PATH`, `FONT_SIZE`
+- スクロール設定: `SCROLL_SPEED_PX`, `FRAME_DELAY_SEC`
 
 ## 実行・デプロイメント
 - メインファイル: `weather_outfit_advisor.py`
@@ -50,6 +54,8 @@
 - ログファイル: `weather_outfit.log`で動作確認
 
 ## 開発時の注意事項
-- ハードウェア依存部分（LCD制御）のモックアップ対応
+- ハードウェア依存部分（OLED制御）のモックアップ対応
 - API利用制限を考慮した実装
 - Raspberry Pi環境での動作確認必須
+- 日本語フォント（Noto Sans CJK JP）の配置が必要
+- I²C通信の有効化とデバイスアドレス確認（`i2cdetect -y 1`）

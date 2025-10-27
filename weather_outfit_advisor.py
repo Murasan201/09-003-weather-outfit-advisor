@@ -5,7 +5,7 @@ Weather Forecast + Clothing Advice Display App
 
 This application fetches weather data from OpenWeatherMap API,
 generates clothing advice using OpenAI API, and displays the
-information on an LCD1602 display with horizontal scrolling.
+information on an SSD1306 OLED display with horizontal scrolling.
 """
 
 # === 必要なライブラリのインポート ===
@@ -20,8 +20,9 @@ from typing import Optional, Dict, Any
 try:
     import openai
     from dotenv import load_dotenv
-    from RPLCD.i2c import CharLCD
-    import smbus2
+    from luma.core.interface.serial import i2c
+    from luma.oled.device import ssd1306
+    from PIL import Image, ImageDraw, ImageFont
 except ImportError as e:
     print(f"Required library not installed: {e}")
     print("Please run: pip install -r requirements.txt")
@@ -44,11 +45,20 @@ logger = logging.getLogger(__name__)
 # === メインクラス：天気予報＋服装提案アドバイザー ===
 class WeatherOutfitAdvisor:
     def __init__(self):
-        """クラスの初期化: APIキーの取得、OpenAI・LCDの設定を行う"""
+        """クラスの初期化: APIキーの取得、OpenAI・OLEDの設定を行う"""
         # 環境変数からAPIキーと都市名を取得
         self.weather_api_key = os.getenv('WEATHER_API_KEY')
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.city_name = os.getenv('CITY_NAME', 'Tokyo')
+
+        # OLED display settings
+        self.oled_width = int(os.getenv('OLED_WIDTH', '128'))
+        self.oled_height = int(os.getenv('OLED_HEIGHT', '64'))
+        self.oled_i2c_address = int(os.getenv('OLED_I2C_ADDRESS', '0x3C'), 16)
+        self.font_path = os.getenv('FONT_PATH', './assets/fonts/NotoSansCJKjp-Regular.otf')
+        self.font_size = int(os.getenv('FONT_SIZE', '14'))
+        self.scroll_speed = int(os.getenv('SCROLL_SPEED_PX', '2'))
+        self.frame_delay = float(os.getenv('FRAME_DELAY_SEC', '0.05'))
 
         # APIキーが設定されていない場合はエラーを発生
         if not self.weather_api_key:
@@ -59,14 +69,25 @@ class WeatherOutfitAdvisor:
         # OpenAI クライアントの初期化
         self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
 
-        # LCD1602ディスプレイの初期化
+        # OLEDディスプレイの初期化 (I2C address 0x3C is common for SSD1306)
         try:
-            self.lcd = CharLCD('PCF8574', 0x27)
-            self.lcd.clear()
-            logger.info("LCD initialized successfully")
+            serial = i2c(port=1, address=self.oled_i2c_address)
+            self.oled = ssd1306(serial, width=self.oled_width, height=self.oled_height)
+            self.oled.contrast(255)  # Set maximum brightness
+            logger.info(f"OLED initialized successfully: {self.oled_width}×{self.oled_height}, address 0x{self.oled_i2c_address:02X}")
         except Exception as e:
-            logger.warning(f"LCD initialization failed: {e}")
-            self.lcd = None
+            logger.warning(f"OLED initialization failed: {e}")
+            self.oled = None
+
+        # Initialize font
+        self.font = None
+        if self.oled:
+            try:
+                self.font = ImageFont.truetype(self.font_path, self.font_size)
+                logger.info(f"Font loaded: {self.font_path}, size {self.font_size}")
+            except IOError as e:
+                logger.warning(f"Font loading failed: {e}. Using default font.")
+                self.font = ImageFont.load_default()
 
     def get_weather_data(self) -> Optional[Dict[str, Any]]:
         """OpenWeatherMap APIから天気データを取得"""
@@ -141,37 +162,56 @@ class WeatherOutfitAdvisor:
         display_text = f"{city}: {temperature}°C {weather_desc} | {outfit_advice}"
         return display_text
 
-    def display_scrolling_text(self, text: str, scroll_delay: float = 0.3):
-        """LCD1602に横スクロールでテキストを表示"""
-        if not self.lcd:
-            logger.info(f"LCD not available. Text would display: {text}")
+    def display_scrolling_text(self, text: str, loop_count: int = 3):
+        """OLEDに横スクロールでテキストを表示"""
+        if not self.oled or not self.font:
+            logger.info(f"OLED not available. Text would display: {text}")
             return
 
-        lcd_width = 16
+        # スクロール用のテキスト幅を計算
+        dummy_image = Image.new("1", (1, 1))
+        dummy_draw = ImageDraw.Draw(dummy_image)
+        bbox = dummy_draw.textbbox((0, 0), text, font=self.font)
+        text_width = bbox[2] - bbox[0]
 
-        # テキストが短い場合は中央揃えで表示
-        if len(text) <= lcd_width:
-            self.lcd.clear()
-            self.lcd.write_string(text.center(lcd_width))
-            return
+        # テキストを垂直中央に配置
+        margin_y = (self.oled_height - self.font_size) // 2
 
-        # 長いテキストの場合、スクロール表示
-        scroll_text = f"    {text}    "
+        logger.info(f"Starting scroll: text width {text_width}px, {loop_count} loops")
+
+        x_position = self.oled_width  # 右端から開始
+        loop_counter = 0
 
         try:
-            # 文字列を1文字ずつずらして表示
-            for i in range(len(scroll_text) - lcd_width + 1):
-                self.lcd.clear()
-                display_segment = scroll_text[i:i + lcd_width]
-                self.lcd.write_string(display_segment)
-                time.sleep(scroll_delay)
+            while loop_counter < loop_count:
+                # フレームごとに新しい画像を作成
+                image = Image.new("1", (self.oled_width, self.oled_height))
+                draw = ImageDraw.Draw(image)
+
+                # 現在位置にテキストを描画
+                draw.text((x_position, margin_y), text, font=self.font, fill=255)
+
+                # OLEDに表示
+                self.oled.display(image)
+
+                # スクロール位置を更新（右→左へ移動）
+                x_position -= self.scroll_speed
+
+                # テキストが完全に画面外に出たら右端に戻す
+                if x_position + text_width < 0:
+                    x_position = self.oled_width
+                    loop_counter += 1
+
+                # フレーム間隔
+                time.sleep(self.frame_delay)
 
         except KeyboardInterrupt:
             logger.info("Scrolling interrupted by user")
+            self.oled.clear()
         except Exception as e:
-            logger.error(f"LCD display error: {e}")
+            logger.error(f"OLED display error: {e}")
 
-    def run(self, display_duration: int = 60):
+    def run(self, loop_count: int = 3):
         """メイン実行関数: プログラム全体の流れを制御"""
         logger.info("Starting Weather Outfit Advisor")
 
@@ -181,9 +221,14 @@ class WeatherOutfitAdvisor:
 
         if not weather_data:
             error_msg = "天気データ取得失敗"
-            if self.lcd:
-                self.lcd.clear()
-                self.lcd.write_string(error_msg)
+            if self.oled:
+                # エラーメッセージを表示
+                image = Image.new("1", (self.oled_width, self.oled_height))
+                draw = ImageDraw.Draw(image)
+                draw.text((10, self.oled_height // 2), error_msg, font=self.font, fill=255)
+                self.oled.display(image)
+                time.sleep(5)
+                self.oled.clear()
             logger.error("Failed to get weather data")
             return
 
@@ -195,15 +240,12 @@ class WeatherOutfitAdvisor:
         display_text = self.format_display_text(weather_data, outfit_advice)
         logger.info(f"Display text: {display_text}")
 
-        # ステップ4: LCD表示（指定時間分繰り返し）
-        start_time = time.time()
-        while time.time() - start_time < display_duration:
-            self.display_scrolling_text(display_text)
-            time.sleep(1)
+        # ステップ4: OLEDに横スクロール表示
+        self.display_scrolling_text(display_text, loop_count=loop_count)
 
         # ステップ5: 終了処理
-        if self.lcd:
-            self.lcd.clear()
+        if self.oled:
+            self.oled.clear()
 
         logger.info("Weather Outfit Advisor completed")
 

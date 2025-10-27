@@ -34,3 +34,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# フォントファイル（ライセンス上の理由で除外）
+assets/fonts/*.otf
+assets/fonts/*.ttf
+assets/fonts/*.woff
+assets/fonts/*.woff2

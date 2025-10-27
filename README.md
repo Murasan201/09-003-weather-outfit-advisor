@@ -149,7 +149,7 @@ crontab -e
 以下を追加：
 
 ```
-0 8 * * * cd /path/to/09-002-weather-outfit-advisor && /usr/bin/python3 weather_outfit_advisor.py
+0 8 * * * cd /path/to/09-003-weather-outfit-advisor && /usr/bin/python3 weather_outfit_advisor.py
 ```
 
 ## ログ出力
@@ -186,7 +186,7 @@ pip install --upgrade -r requirements.txt
 ## ファイル構成
 
 ```
-09-002-weather-outfit-advisor/
+09-003-weather-outfit-advisor/
 ├── weather_outfit_advisor.py                           # メインアプリケーション
 ├── requirements.txt                                    # Python依存関係
 ├── .env.example                                       # 環境変数テンプレート
@@ -196,7 +196,7 @@ pip install --upgrade -r requirements.txt
 │       ├── README.md                                  # フォント配置手順
 │       ├── NotoSansCJKjp-Regular.otf                  # 日本語フォント（要ダウンロード）
 │       └── LICENSE                                    # フォントライセンス
-├── 09-002_天気予報＋服装提案掲示板アプリ_要件定義書.md  # 要件定義書
+├── 09-003_天気予報＋服装提案掲示板アプリ_要件定義書.md  # 要件定義書
 ├── CLAUDE.md                                          # Claude Code作業ルール
 ├── weather_outfit.log                                 # ログファイル（実行時作成）
 └── README.md                                          # このファイル

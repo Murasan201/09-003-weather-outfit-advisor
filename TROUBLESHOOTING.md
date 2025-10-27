@@ -259,14 +259,15 @@ CITY_NAME=Tokyo
 
 ## バージョン情報
 
-このドキュメントの最終更新日: 2025-10-22
+このドキュメントの最終更新日: 2025-10-27
 
 **使用ライブラリバージョン**:
 - Python: 3.9以上
-- openai: 1.0以降
-- requests: 最新版
-- python-dotenv: 最新版
-- RPLCD: 最新版（LCD版のみ）
+- openai: 2.0.0以上推奨
+- requests: 2.31.0以上
+- python-dotenv: 1.0.0以上
+- luma.oled: 3.10.0以上（OLED版）
+- Pillow: 10.0.0以上
 
 ---
 
@@ -325,4 +326,115 @@ response = client.chat.completions.create(
 ```
 
 ✅ 正常に服装アドバイスが生成され、LCD表示用のメッセージが作成された。
+
+---
+
+### エラー5: openaiライブラリ未インストール／externally-managed-environment エラー
+
+**発生日時**: 2025-10-27
+
+**エラーメッセージ**:
+```
+error: externally-managed-environment
+
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to
+    install.
+
+    If you wish to install a non-Debian-packaged Python package,
+    create a virtual environment using python3 -m venv path/to/venv.
+```
+
+**発生状況**:
+- 初回セットアップ時に`pip install openai`を実行
+- Raspberry Pi OS（Bookworm以降）で発生
+
+**原因**:
+Raspberry Pi OS Bookworm以降では、PEP 668に準拠してシステムPython環境が外部管理（externally-managed）になっており、通常の`pip install`がブロックされる。これはシステムパッケージマネージャ（apt）とpipの競合を防ぐためのセキュリティ対策。
+
+**対策1（推奨）**: `--break-system-packages`オプションを使用
+```bash
+pip install --break-system-packages openai
+```
+
+**対策2（より安全）**: 仮想環境を使用
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**実行例**:
+```bash
+# openaiライブラリのインストール
+pip install --break-system-packages openai==1.3.7
+
+# または最新版
+pip install --break-system-packages openai
+```
+
+**参考情報**:
+- PEP 668: https://peps.python.org/pep-0668/
+- Raspberry Pi OS Bookworm (2023年10月リリース) 以降で適用
+- システムの安定性を重視する場合は仮想環境の使用を推奨
+- 個人プロジェクトや学習目的では`--break-system-packages`で問題ない
+
+---
+
+### エラー6: openai 1.3.7 バージョン互換性エラー
+
+**発生日時**: 2025-10-27
+
+**エラーメッセージ**:
+```
+2025-10-27 21:02:33,624 - ERROR - アプリケーションエラー: Client.__init__() got an unexpected keyword argument 'proxies'
+```
+
+**発生状況**:
+- openai==1.3.7をインストール後、アプリケーション実行時にエラー
+- `openai.OpenAI(api_key=...)`での初期化時に発生
+
+**原因**:
+openai 1.3.7は2023年11月リリースの旧バージョンで、現在のPython 3.13環境やシステム依存関係との互換性に問題がある可能性がある。特に、初期化時の内部実装で`proxies`引数の扱いに関する互換性問題が発生。
+
+**対策**: openaiライブラリを最新版にアップグレード
+```bash
+pip install --break-system-packages --upgrade openai
+```
+
+**実行例**:
+```bash
+# アップグレード前
+$ pip show openai | grep Version
+Version: 1.3.7
+
+# アップグレード実行
+$ pip install --break-system-packages --upgrade openai
+Successfully installed openai-2.6.1
+
+# アプリケーション再実行
+$ python3 weather_outfit_advisor.py
+2025-10-27 21:03:03,372 - INFO - I²C初期化完了: アドレス 0x3C, ポート 1
+2025-10-27 21:03:03,481 - INFO - Starting Weather Outfit Advisor
+...
+2025-10-27 21:05:27,922 - INFO - 天気予報＋服装提案アドバイザー完了
+```
+
+**修正後のバージョン**:
+- openai: 2.6.1（2025年10月時点）
+
+**参考情報**:
+- openai 1.x系は2023年11月リリース（v1.0.0）
+- openai 2.x系は2024年以降のリリース
+- 最新版の使用を推奨（後方互換性は概ね維持されている）
+- requirements.txtのバージョン指定は`openai>=2.0.0`に更新することを推奨
+
+**動作確認結果**:
+✅ openai 2.6.1へのアップグレードにより、アプリケーションが正常に動作
+- 天気データ取得成功
+- OpenAI APIによる服装アドバイス生成成功
+- OLED日本語スクロール表示完了
+
+---
 

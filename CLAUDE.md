@@ -13,9 +13,15 @@
 ## 技術スタック
 - **言語**: Python 3.9以上
 - **ハードウェア**: Raspberry Pi 5 + SSD1306 OLED（I²C接続、128×64）
-- **API**: OpenWeatherMap API, OpenAI API
+- **API**:
+  - OpenWeatherMap API（天気情報取得）
+  - OpenAI API: gpt-5-mini（服装アドバイス生成）
+    - パラメータ: `max_completion_tokens=1000`
+    - 推論トークン使用実績: 平均427トークン
 - **主要ライブラリ**: requests, openai, luma.oled, Pillow, python-dotenv
-- **参照実装**: https://github.com/Murasan201/06-004-ssd1306-oled-jp-display
+- **参照実装**:
+  - OLED日本語表示: https://github.com/Murasan201/06-004-ssd1306-oled-jp-display
+  - GPT-5 API呼び出し: https://github.com/Murasan201/09-001-gpt-response-minimal
 
 ## コーディング規約
 - PEP8準拠のコードスタイル
@@ -36,9 +42,15 @@
 - 定期実行テスト（指定時刻での実行）
 
 ## 受け入れ基準
-1. 当日の天気と服装アドバイスがSSD1306 OLEDで正しく日本語スクロール表示される
-2. APIエラー発生時にログが出力され、次実行で回復する
-3. 環境変数変更が即時反映される
+1. 当日の天気と服装アドバイスがSSD1306 OLEDで正しく日本語スクロール表示される ✅
+2. APIエラー発生時にログが出力され、次実行で回復する ✅
+3. 環境変数変更が即時反映される ✅
+4. GPT-5-miniでの服装アドバイス生成が正常動作する ✅
+5. トークン使用状況がログに記録される ✅
+
+## 実装完了日
+- 2025年10月28日
+- 動作確認: コンソール版・OLED版ともに正常動作確認済み
 
 ## 環境設定
 - `.env`ファイルでAPI認証情報とディスプレイ設定を管理

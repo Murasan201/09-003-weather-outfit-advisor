@@ -180,18 +180,32 @@ class WeatherOutfitAdvisor:
 
         try:
             # OpenAI APIを呼び出して服装アドバイスを生成
-            # gpt-4o-mini: コスト効率の良い軽量モデル
+            # gpt-5-mini: GPT-5の軽量モデル（推論機能付き）
+            # 参考実装: https://github.com/Murasan201/09-001-gpt-response-minimal
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",  # 使用モデル（安価で高速）
+                model="gpt-5-mini",  # GPT-5の軽量モデル
                 messages=[
                     {"role": "system", "content": "あなたは天気に基づいた服装アドバイザーです。簡潔で実用的なアドバイスを提供してください。"},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=100  # 生成する最大トークン数
+                max_completion_tokens=1000  # 推論トークン+レスポンストークンの合計
             )
 
             advice = response.choices[0].message.content.strip()
+
+            # トークン使用状況をログ出力（GPT-5の推論トークンを含む）
+            usage = response.usage
             logger.info(f"Generated outfit advice: {advice}")
+            logger.info(f"Token usage - Total: {usage.total_tokens}, "
+                       f"Input: {usage.prompt_tokens}, "
+                       f"Output: {usage.completion_tokens}")
+
+            # GPT-5では推論トークン数も確認可能（存在する場合）
+            if hasattr(usage, 'completion_tokens_details'):
+                details = usage.completion_tokens_details
+                if hasattr(details, 'reasoning_tokens'):
+                    logger.info(f"Reasoning tokens: {details.reasoning_tokens}")
+
             return advice
 
         except Exception as e:

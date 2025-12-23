@@ -103,7 +103,7 @@ class WeatherOutfitAdvisor:
         except Exception as e:
             logger.error(f"[OLED初期化]エラー: {e}")
             logger.error("対処方法: デバイスとの通信を確認してください")
-            logger.error("ヒント: レベル変換モジュールの配線確認（LV=3.3V, HV=OLED電源）")
+            logger.error("ヒント: I²C配線確認（SDA=GPIO2, SCL=GPIO3, VCC=3.3V, GND）")
             self.oled = None
             self.font = None
             return

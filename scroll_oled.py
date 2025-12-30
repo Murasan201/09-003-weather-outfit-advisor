@@ -58,7 +58,7 @@ class OLEDScroller:
             print(f"ヒント: {font_path} にフォントを配置")
             sys.exit(1)
 
-    def scroll(self, text, speed=2, delay=0.05, loops=None, y_pos=24):
+    def scroll(self, text, speed=2, delay=0.1, loops=None, y_pos=24):
         """
         テキストを右から左へスクロール表示
 

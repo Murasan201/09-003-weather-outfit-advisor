@@ -172,14 +172,17 @@ ls -la
 ### 5.1 pip のアップグレード
 
 ```bash
-pip install --upgrade pip
+pip install --upgrade pip --break-system-packages
 ```
 
 ### 5.2 必要なライブラリのインストール
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt --break-system-packages
 ```
+
+**注意**: Raspberry Pi OS (Bookworm以降) では、システムPythonが外部管理されています。
+`--break-system-packages` オプションが必要です。
 
 ### インストールされるライブラリ
 
@@ -362,7 +365,7 @@ OLEDが接続されていない場合でも、プログラムは動作します�
 
 ```bash
 # ライブラリの再インストール
-pip install --upgrade -r requirements.txt
+pip install --upgrade -r requirements.txt --break-system-packages
 ```
 
 ---

@@ -40,3 +40,6 @@ assets/fonts/*.otf
 assets/fonts/*.ttf
 assets/fonts/*.woff
 assets/fonts/*.woff2
+
+# 参照データディレクトリ（別リポジトリのクローン）
+reference/
